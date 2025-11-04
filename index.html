@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NBSP → Space Cleaner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { --gap: 14px; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: #0f172a; /* slate-900 */
+      color: #e5e7eb;      /* gray-200 */
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .app {
+      width: min(1100px, 100%);
+      display: grid;
+      gap: var(--gap);
+    }
+    h1 {
+      font-size: 1.15rem;
+      margin: 0 0 2px 0;
+      color: #f8fafc; /* slate-50 */
+      letter-spacing: 0.2px;
+    }
+    p.helper {
+      margin: 0 0 8px 0;
+      color: #94a3b8; /* slate-400 */
+      font-size: 0.9rem;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--gap);
+    }
+    .panel {
+      background: #111827; /* gray-900 */
+      border: 1px solid #1f2937; /* gray-800 */
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 280px;
+    }
+    .panel header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+      background: #0b1220; /* slightly darker header */
+      border-bottom: 1px solid #1f2937;
+    }
+    .panel header .title {
+      font-size: 0.95rem;
+      color: #cbd5e1; /* slate-300 */
+    }
+    textarea, pre {
+      width: 100%;
+      height: 340px;
+      padding: 12px;
+      box-sizing: border-box;
+      border: none;
+      outline: none;
+      resize: vertical;
+      background: transparent;
+      color: #e5e7eb;
+      font: 13.5px/1.5 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      tab-size: 2;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    button, .badge {
+      border: 1px solid #334155; /* slate-700 */
+      background: #0b1730; 
+      color: #e5e7eb;
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      cursor: pointer;
+    }
+    button:hover { background: #0d1b3a; }
+    button:active { transform: translateY(1px); }
+    .badge {
+      cursor: default;
+      padding: 6px 8px;
+      opacity: 0.9;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      margin-top: -4px;
+    }
+    .muted { color: #64748b; font-variant-numeric: tabular-nums; }
+    .inline {
+      display: inline-flex;
+      gap: 8px;
+      align-items: center;
+    }
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+      textarea, pre { height: 260px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <h1>Non-breaking Space Cleaner</h1>
+      <p class="helper">Paste code or text on the left. All non-breaking spaces (including <code>NBSP</code> and narrow <code>NBSP</code>) are replaced with normal spaces on the right.</p>
+    </header>
+
+    <section class="grid" role="region" aria-label="Editor">
+      <!-- INPUT -->
+      <div class="panel" aria-live="polite">
+        <header>
+          <span class="title">Input</span>
+          <div class="toolbar">
+            <button type="button" id="btnPaste">Paste</button>
+            <button type="button" id="btnClear">Clear</button>
+          </div>
+        </header>
+        <textarea id="input" placeholder="Paste code from a chatbot here…"></textarea>
+      </div>
+
+      <!-- OUTPUT -->
+      <div class="panel">
+        <header>
+          <span class="title">Output</span>
+          <div class="toolbar">
+            <span class="badge" id="stats" title="Replacement stats">0 replaced</span>
+            <button type="button" id="btnCopy" title="Copy cleaned text">Copy</button>
+          </div>
+        </header>
+        <textarea id="output" readonly aria-readonly="true" placeholder="Cleaned text appears here…" tabindex="-1"></textarea>
+      </div>
+    </section>
+
+    <div class="footer">
+      <div class="inline">
+        <span>What’s removed/replaced:</span>
+        <code class="muted" title="U+00A0">NBSP</code>,
+        <code class="muted" title="U+202F">Narrow&nbsp;NBSP</code>,
+        <span>and literal <code>&amp;nbsp;</code> strings.</span>
+      </div>
+      <div>Tip: the copy button grabs the entire output.</div>
+    </div>
+  </main>
+
+  <script>
+    // Replace NBSP-like characters with regular spaces.
+    // Covers: U+00A0 (NBSP), U+202F (NARROW NBSP), and literal "&nbsp;" text.
+    function cleanNBSP(str) {
+      if (!str) return "";
+      const replaced = str
+        .replace(/&nbsp;/g, " ")         // literal entity text, just in case
+        .replace(/[\u00A0\u202F]/g, " "); // actual non-breaking space chars
+      return replaced;
+    }
+
+    const $in = document.getElementById("input");
+    const $out = document.getElementById("output");
+    const $stats = document.getElementById("stats");
+    const $btnCopy = document.getElementById("btnCopy");
+    const $btnClear = document.getElementById("btnClear");
+    const $btnPaste = document.getElementById("btnPaste");
+
+    function update() {
+      const src = $in.value ?? "";
+      const beforeCount =
+        (src.match(/&nbsp;/g) || []).length +
+        (src.match(/\u00A0/g) || []).length +
+        (src.match(/\u202F/g) || []).length;
+
+      const cleaned = cleanNBSP(src);
+      $out.value = cleaned;
+      $stats.textContent = `${beforeCount} replaced`;
+    }
+
+    // Live clean while typing/pasting
+    $in.addEventListener("input", update);
+
+    // Buttons
+    $btnCopy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText($out.value);
+        const prev = $btnCopy.textContent;
+        $btnCopy.textContent = "Copied!";
+        setTimeout(() => ($btnCopy.textContent = prev), 900);
+      } catch {
+        // Fallback: select and execCommand for older browsers
+        $out.removeAttribute("readonly");
+        $out.select();
+        document.execCommand("copy");
+        $out.setAttribute("readonly", "true");
+      }
+    });
+
+    $btnClear.addEventListener("click", () => {
+      $in.value = "";
+      update();
+      $in.focus();
+    });
+
+    $btnPaste.addEventListener("click", async () => {
+      try {
+        const text = await navigator.clipboard.readText();
+        $in.value = text;
+        update();
+      } catch {
+        // If permission blocked, just focus input for manual paste
+        $in.focus();
+      }
+    });
+
+    // Initialize once on load
+    update();
+  </script>
+</body>
+</html>
